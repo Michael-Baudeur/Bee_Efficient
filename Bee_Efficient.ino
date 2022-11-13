@@ -112,30 +112,26 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(SWITCH_LOAD, HIGH);
+  go_high();
   int index = 0;
   dht_ext.get_data(data_packet, &index);
-  Serial.println(index);
   dht_int.get_data(data_packet, &index);
-Serial.println(index);
   ds1_temperature(data_packet, &index);
-  Serial.println(index);
   ds2_temperature(data_packet, &index);
-  Serial.println(index);
+
   Scale.power_on();
   delay(500);
   Scale.get_data(data_packet, &index);
-  Serial.println(index);
   Scale.power_off();
+
   SP_Current_Sensor.get_data(data_packet, &index);
-  Serial.println(index);
   batt.get_data(data_packet, &index);
-  Serial.println(index);
-  Serial.println("data packet : ");
+  /*Serial.println("data packet : ");
   for(int i = 0; i < 45; i++)
   {
     Serial.println(data_packet[i]);
-  }
-  
+  }*/
+  go_low();
   digitalWrite(SWITCH_LOAD, LOW);
   //E5.join(LORA_JOIN_FORCE);
   E5.module_send_8(data_packet, 45);
@@ -146,8 +142,21 @@ Serial.println(index);
 
 
 
+//LOW POWER FUNCTIONS**********************************************************
+void go_low()
+{
+  digitalWrite(LED_PWR, LOW);
+  digitalWrite(PIN_ENABLE_SENSORS_3V3, LOW);
+  digitalWrite(PIN_ENABLE_I2C_PULLUP, LOW);
+}
 
-
+void go_high()
+{
+  digitalWrite(LED_PWR, HIGH);
+  digitalWrite(PIN_ENABLE_SENSORS_3V3, HIGH);
+  digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH);  
+}
+//*****************************************************************************
 
 
 
