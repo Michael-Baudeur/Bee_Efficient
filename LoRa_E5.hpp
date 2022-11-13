@@ -4,13 +4,16 @@
 #include "Arduino.h"
 #include "Rules.hpp"
 
+#define LORA_JOIN_FORCE 1
+
 class LoRa_E5
 {
   public:
     LoRa_E5();
     
     bool module_setup();
-    bool join();
+    bool join(int mode = 0);
+    bool connect(uint32_t max_join_attempts);
     void module_send(uint8_t ID, uint8_t* data, uint32_t data_length);
     void module_send_8(uint8_t* data, uint32_t data_length);
 

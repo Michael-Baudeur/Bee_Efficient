@@ -48,16 +48,17 @@ bool LoRa_E5::module_setup()
   if(at_send_check_response("+AT: OK", 100, "AT\r\n")) 
   { 
     _is_exist = true; 
+    //at_send_check_response("+FDEFAULT: OK", 1000, "AT+FDEFAULT\r\n");
     at_send_check_response("+ID: AppEui", 1000, "AT+ID\r\n"); 
     at_send_check_response("+MODE: LWOTAA", 1000, "AT+MODE=LWOTAA\r\n"); 
     at_send_check_response("+DR: EU868", 1000, "AT+DR=EU868\r\n"); 
     at_send_check_response("+CH: NUM", 1000, "AT+CH=NUM,0-2\r\n"); 
     at_send_check_response("+KEY: APPKEY", 1000, 
-    "AT+KEY=APPKEY,\"CF6615B23A1D62DAF409D4FD072EA6F1\"\r\n"); 
-    at_send_check_response("+KEY: DEVEUI", 1000, "AT+KEY=DEVEUI,\"2CF7F1203230288A\"\r\n"); 
-    at_send_check_response("+KEY: APPEUI", 1000, "AT+KEY=APPEUI,\"0000000000000000\"\r\n"); 
+    "AT+KEY=APPKEY,\"E8348844F285BF16C81AA59CD899E1B5\"\r\n"); 
+    at_send_check_response("+ID: DEVEUI", 1000, "AT+ID=DEVEUI,\"70B3D57ED0057563\"\r\n"); 
+    at_send_check_response("+ID: APPEUI", 1000, "AT+ID=APPEUI,\"0000000000000007\"\r\n"); 
     at_send_check_response("+CLASS: C", 1000, "AT+CLASS=A\r\n"); 
-    _ret=at_send_check_response("+PORT: 8", 1000, "AT+PORT=8\r\n"); 
+    _ret=at_send_check_response("+PORT: 8", 1000, "AT+PORT=8\r\n");
     delay(200); 
     _is_join = true;
     return true; 
@@ -69,12 +70,12 @@ bool LoRa_E5::module_setup()
   return false; 
 }
 
-bool LoRa_E5::join()
+bool LoRa_E5::join(int mode)
 {
   if (_is_exist) 
   { 
     int ret = 0; 
-    if (_is_join) 
+    if (_is_join || mode == LORA_JOIN_FORCE) 
     { 
       ret = at_send_check_response("+JOIN: Network joined", 12000, "AT+JOIN\r\n"); 
       if (ret) 
@@ -88,13 +89,16 @@ bool LoRa_E5::join()
       } 
       else 
       { 
-        at_send_check_response("+ID: AppEui", 1000, "AT+ID\r\n");
-        #ifdef PRINT_ENABLE 
-        Serial.println(); 
-        Serial.print("JOIN failed!\r\n\r\n"); 
-        #endif
-        return false;
-        delay(5000); 
+        if(mode != LORA_JOIN_FORCE)
+        {
+          at_send_check_response("+ID: AppEui", 1000, "AT+ID\r\n");
+          #ifdef PRINT_ENABLE 
+          Serial.println(); 
+          Serial.print("JOIN failed!\r\n\r\n"); 
+          #endif
+          return false;
+          delay(5000);
+        } 
       } 
     } 
   } 
@@ -102,6 +106,24 @@ bool LoRa_E5::join()
   { 
     return false;
   } 
+}
+
+bool LoRa_E5::connect(uint32_t max_join_attempts)
+{
+  for(int i = 0; i < max_join_attempts; i++)
+  {
+    if(this->join())
+    {
+      #ifdef PRINT_ENABLE
+      Serial.println("Successfully connected to LoRa Network!");
+      #endif
+      return true;
+    }
+  }
+  #ifdef PRINT_ENABLE
+  Serial.println("/!\Failed to join LoRa Network!");
+  #endif
+  return false;
 }
 
 void LoRa_E5::module_send(uint8_t ID, uint8_t* data, uint32_t data_length)
@@ -116,7 +138,7 @@ void LoRa_E5::module_send(uint8_t ID, uint8_t* data, uint32_t data_length)
   }
   strcat(cmd, "\r\n"); 
   this->at_send_check_response("ACK Received", 5000, cmd); 
-  delay(20000);
+  delay(1000);
 }
 
 void LoRa_E5::module_send_8(uint8_t* data, uint32_t data_length)
@@ -131,5 +153,5 @@ void LoRa_E5::module_send_8(uint8_t* data, uint32_t data_length)
   }
   strcat(cmd, "\r\n"); 
   this->at_send_check_response("ACK Received", 5000, cmd); 
-  delay(20000);
+  delay(1000);
 }

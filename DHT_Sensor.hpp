@@ -14,16 +14,18 @@ class DHT_Sensor
     public:
     DHT_Sensor();
     DHT_Sensor(int pin);
+    void setup();
     bool update_data();
     float get_temperature();
     float get_humidity();
-    uint32_t* get_data();
+    uint8_t* get_data();
+    uint8_t* get_data(uint8_t* packet, int* index);
     
   private:
     int _pin;
     float _temperature;
     float _humidity;
-    uint32_t _data[2];
+    uint8_t _data[8];
     DHT* _dht;
     
 
