@@ -4,6 +4,7 @@
 #include "LoRa_E5.hpp"
 #include "INA219_Sensor.hpp"
 #include "Battery_Monitor.hpp"
+#include "Microphone.hpp"
 #include "Rules.hpp"
 
 //*****************************************************************************
@@ -22,7 +23,7 @@
 
 #define BATTERY_MONITOR_PIN A0 //Analog
 
-#define MICROPHONE_PIN 2 //Analog
+#define MICROPHONE_PIN A2 //Analog
 
 #define SWITCH_LOAD 9
 //*****************************************************************************
@@ -64,6 +65,7 @@ HX711_Sensor Scale(HX711_SENSOR_DOUT_PIN, HX711_SENSOR_SCK_PIN);
 LoRa_E5 E5;
 INA219_Sensor SP_Current_Sensor;
 Battery_Monitor batt(BATTERY_MONITOR_PIN, BATTERY_FULL_CHARGE_VOLTAGE_V, BATTERY_CUTOFF_VOLTAGE_V, BATTERY_VOLTAGE_BRIDGE_RATIO_DIVIDER);
+Microphone microphone(MICROPHONE_PIN, 586);
 uint8_t data_packet[45];
 
 
@@ -93,6 +95,7 @@ void setup() {
   dht_ext.setup();
   dht_int.setup();
   batt.setup();
+  microphone.setup();
   Scale.module_setup();
   E5.module_setup();
   E5.connect(1);
@@ -126,6 +129,7 @@ void loop() {
 
   SP_Current_Sensor.get_data(data_packet, &index);
   batt.get_data(data_packet, &index);
+  microphone.get_data(data_packet, &index);
   /*Serial.println("data packet : ");
   for(int i = 0; i < 45; i++)
   {
@@ -133,7 +137,7 @@ void loop() {
   }*/
   go_low();
   digitalWrite(SWITCH_LOAD, LOW);
-  //E5.join(LORA_JOIN_FORCE);
+  E5.join(LORA_JOIN_FORCE);
   E5.module_send_8(data_packet, 45);
   delay(1000*5); //wait 10 minutes
 }
