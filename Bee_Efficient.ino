@@ -10,20 +10,20 @@
 //*****************************************************************************
 
 //PIN DEFINES******************************************************************
-#define DHT_SENSOR_1_PIN 2
-#define DHT_SENSOR_2_PIN 4
+#define DHT_SENSOR_INT_PIN 6
+#define DHT_SENSOR_EXT_PIN 7
 
-#define DS18B20_SENSOR_1_PIN 3
+#define DS18B20_SENSOR_1_PIN 5
 #define DS18B20_SENSOR_2_PIN 5
 
-#define HX711_SENSOR_DOUT_PIN 7
-#define HX711_SENSOR_SCK_PIN 6
+#define HX711_SENSOR_DOUT_PIN 3
+#define HX711_SENSOR_SCK_PIN 2
 
-#define PWR_LED_PIN 10
+//#define PWR_LED_PIN 10
 
 #define BATTERY_MONITOR_PIN A0 //Analog
 
-#define MICROPHONE_PIN A2 //Analog
+#define MICROPHONE_PIN A3 //Analog
 
 #define SWITCH_LOAD 9
 //*****************************************************************************
@@ -46,27 +46,26 @@
 
 
 //Objects declaration
-MaximWire::Bus bus_ds1(PIN_BUS_DS1);
-MaximWire::Bus bus_ds2(PIN_BUS_DS2);
-MaximWire::DS18B20 device;
+
+
 
 //Function prototypes
 float ds1_temperature();
-float ds2_temperature();
+//float ds2_temperature();
 
 //*****************************************************************************
 
 
 
 //MODULE DECLARATIONS**********************************************************
-DHT_Sensor dht_ext(DHT_SENSOR_1_PIN);
-DHT_Sensor dht_int(DHT_SENSOR_2_PIN);
+DHT_Sensor dht_ext(DHT_SENSOR_EXT_PIN);
+DHT_Sensor dht_int(DHT_SENSOR_INT_PIN);
 HX711_Sensor Scale(HX711_SENSOR_DOUT_PIN, HX711_SENSOR_SCK_PIN);
 LoRa_E5 E5;
 INA219_Sensor SP_Current_Sensor;
 Battery_Monitor batt(BATTERY_MONITOR_PIN, BATTERY_FULL_CHARGE_VOLTAGE_V, BATTERY_CUTOFF_VOLTAGE_V, BATTERY_VOLTAGE_BRIDGE_RATIO_DIVIDER);
 Microphone microphone(MICROPHONE_PIN, 586);
-uint8_t data_packet[45];
+uint8_t data_packet[43];
 
 
 //*****************************************************************************
@@ -82,21 +81,28 @@ void setup() {
   //delay(5000);
   #endif
   pinMode(MICROPHONE_PIN, INPUT);
-  pinMode(PWR_LED_PIN, OUTPUT);
-  digitalWrite(PWR_LED_PIN, HIGH);
+  //pinMode(PWR_LED_PIN, OUTPUT);
+  digitalWrite(LED_PWR, HIGH);  
+  //digitalWrite(PWR_LED_PIN, HIGH);
   delay(1000);
-  digitalWrite(PWR_LED_PIN, LOW);
+  digitalWrite(LED_PWR, LOW);
+  //digitalWrite(PWR_LED_PIN, LOW);
   //setup
   //Serial.println("SETUP BEGIN");
   pinMode(SWITCH_LOAD, OUTPUT);
   digitalWrite(SWITCH_LOAD, HIGH);
-  delay(1000);
+  delay(3000);
   SP_Current_Sensor.module_setup(5);
   dht_ext.setup();
   dht_int.setup();
+  uint8_t init_temp;
+  ds1_temperature(&init_temp, 0);
   batt.setup();
   microphone.setup();
   Scale.module_setup();
+  
+  //E5.module_setup();
+  //E5.factory_reset();
   E5.module_setup();
   E5.connect(1);
 
@@ -116,12 +122,18 @@ void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(SWITCH_LOAD, HIGH);
   go_high();
+  //delay(5000);
+  dht_ext.setup();
+  dht_int.setup();
   int index = 0;
+  delay(1000);
+  SP_Current_Sensor.module_setup(1);
   dht_ext.get_data(data_packet, &index);
   dht_int.get_data(data_packet, &index);
+  //delay(1000);
   ds1_temperature(data_packet, &index);
-  ds2_temperature(data_packet, &index);
-
+  //ds2_temperature(data_packet, &index);
+  //delay(2000);
   Scale.power_on();
   delay(500);
   Scale.get_data(data_packet, &index);
@@ -130,16 +142,16 @@ void loop() {
   SP_Current_Sensor.get_data(data_packet, &index);
   batt.get_data(data_packet, &index);
   microphone.get_data(data_packet, &index);
-  /*Serial.println("data packet : ");
-  for(int i = 0; i < 45; i++)
-  {
-    Serial.println(data_packet[i]);
-  }*/
+  
   go_low();
+  E5.low_power_OFF();
+  delay(1000);
   digitalWrite(SWITCH_LOAD, LOW);
   E5.join(LORA_JOIN_FORCE);
-  E5.module_send_8(data_packet, 45);
-  delay(1000*5); //wait 10 minutes
+  //E5.positioning();
+  E5.module_send_8(data_packet, 43);
+  E5.low_power_ON();
+  delay(1000); //wait 10 minutes
 }
 //*****************************************************************************
 
@@ -173,129 +185,74 @@ void go_high()
 //MaximWire DS18B20 Functions**************************************************
 float ds1_temperature(uint8_t* packet, int* index)
 {
+  float temperature = 0;
+  MaximWire::Bus bus_ds1(PIN_BUS_DS1);
+  MaximWire::DS18B20 device;
+  
   MaximWire::Discovery discovery = bus_ds1.Discover();
-  MaximWire::Address address;
-  if (discovery.FindNextDevice(address))
+  do
   {
-    #ifdef PRINT_ENABLE
-    Serial.print("FOUND: ");
-    Serial.print(address.ToString());
-    
-    if (address.IsValid())
+  MaximWire::Address address;
+    if (discovery.FindNextDevice(address))
     {
-      Serial.print(" (VALID)");
-    } 
+      #ifdef PRINT_ENABLE
+      Serial.print("FOUND: ");
+      Serial.print(address.ToString());
+
+      if (address.IsValid())
+      {
+        Serial.print(" (VALID)");
+      } 
+      else
+      {
+        Serial.print(" (INVALID)");
+      }
+      #endif
+
+      if (address.GetModelCode() == MaximWire::DS18B20::MODEL_CODE)
+      {
+        #ifdef PRINT_ENABLE
+        Serial.print(" (DS18B20)");
+        #endif
+        MaximWire::DS18B20 device(address);
+        #ifdef PRINT_ENABLE
+        if (device.IsParasitePowered(bus_ds1))
+        {
+          Serial.print(" (PARASITE POWER)");
+        }
+        #endif
+        float temp = device.GetTemperature<float>(bus_ds1);
+        temperature += temp;
+        #ifdef PRINT_ENABLE
+        Serial.print(" temp=");
+        Serial.print(temp);
+        Serial.println();
+        #endif
+        device.Update(bus_ds1);
+
+        uint16_t temp_format = ((temp*100)+(65534/2));
+        uint8_t* temp_formatter = (uint8_t*)&temp_format;
+        for(int i = 0; i < 2; i++)
+        {
+          packet[*index] = temp_formatter[i];
+          (*index)++;
+        }
+      }
+      #ifdef PRINT_ENABLE
+      else 
+      {
+        Serial.println();
+      }
+      #endif
+    }
+    #ifdef PRINT_ENABLE
     else
     {
-      Serial.print(" (INVALID)");
+      Serial.println("NOTHING FOUND");
     }
     #endif
-
-    if (address.GetModelCode() == MaximWire::DS18B20::MODEL_CODE)
-    {
-      #ifdef PRINT_ENABLE
-      Serial.print(" (DS18B20)");
-      #endif
-      MaximWire::DS18B20 device(address);
-      #ifdef PRINT_ENABLE
-      if (device.IsParasitePowered(bus_ds1))
-      {
-        Serial.print(" (PARASITE POWER)");
-      }
-      #endif
-      float temp = device.GetTemperature<float>(bus_ds1);
-      #ifdef PRINT_ENABLE
-      Serial.print(" temp=");
-      Serial.print(temp);
-      Serial.println();
-      #endif
-      device.Update(bus_ds1);
-
-      uint32_t temp_format = temp*100;
-      uint8_t* temp_formatter = (uint8_t*)&temp_format;
-      for(int i = 0; i < 4; i++)
-      {
-        packet[*index] = temp_formatter[i];
-        (*index)++;
-      }
-      return temp;
-    }
-    #ifdef PRINT_ENABLE
-    else 
-    {
-      Serial.println();
-    }
-    #endif
-  }
-  #ifdef PRINT_ENABLE
-  else
-  {
-    Serial.println("NOTHING FOUND");
-  }
-  #endif
-}
-
-float ds2_temperature(uint8_t* packet, int* index)
-{
-  MaximWire::Discovery discovery = bus_ds2.Discover();
-  MaximWire::Address address;
-  if (discovery.FindNextDevice(address))
-  {
-    #ifdef PRINT_ENABLE
-    Serial.print("FOUND: ");
-    Serial.print(address.ToString());
     
-    if (address.IsValid())
-    {
-      Serial.print(" (VALID)");
-    } 
-    else
-    {
-      Serial.print(" (INVALID)");
-    }
-    #endif
-
-    if (address.GetModelCode() == MaximWire::DS18B20::MODEL_CODE)
-    {
-      #ifdef PRINT_ENABLE
-      Serial.print(" (DS18B20)");
-      #endif
-      MaximWire::DS18B20 device(address);
-      #ifdef PRINT_ENABLE
-      if (device.IsParasitePowered(bus_ds2))
-      {
-        Serial.print(" (PARASITE POWER)");
-      }
-      #endif
-      float temp = device.GetTemperature<float>(bus_ds2);
-      #ifdef PRINT_ENABLE
-      Serial.print(" temp=");
-      Serial.print(temp);
-      Serial.println();
-      #endif
-      device.Update(bus_ds2);
-
-      uint32_t temp_format = temp*100;
-      uint8_t* temp_formatter = (uint8_t*)&temp_format;
-      for(int i = 0; i < 4; i++)
-      {
-        packet[*index] = temp_formatter[i];
-        (*index)++;
-      }
-      return temp;
-    }
-    #ifdef PRINT_ENABLE
-    else 
-    {
-      Serial.println();
-    }
-    #endif
-  }
-  #ifdef PRINT_ENABLE
-  else
-  {
-    Serial.println("NOTHING FOUND");
-  }
-  #endif 
+  }while(discovery.HaveMore());
+  return temperature/2;
 }
 //*****************************************************************************
