@@ -25,7 +25,7 @@ class DHT_Sensor
     int _pin;
     float _temperature;
     float _humidity;
-    uint8_t _data[8];
+    uint8_t _data[4];
     DHT* _dht;
     
 

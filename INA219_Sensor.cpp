@@ -88,15 +88,23 @@ double INA219_Sensor::power()
 double INA219_Sensor::light_percent()
 {
   double current = this->current();
-  _light = current*(0.9/_full_sun_current)*100;
+  double bus_voltage = this->bus_voltage();
+  if(bus_voltage < 4.5)
+  {
+    _light = (bus_voltage/4.5)*25;
+  }
+  else
+  {
+    _light = current*(0.9/_full_sun_current)*75 + 25;
+  }
 
   #ifdef PRINT_ENABLE
   Serial.print("Light percent : ");
   Serial.print(_light);
   Serial.println("%");
   #endif
-
-  uint32_t light_format = _light*100;
+  
+  int32_t light_format = _light*100;
   uint8_t* light_formatter = (uint8_t*)&light_format;
   _data[0] = light_formatter[0];
   _data[1] = light_formatter[1];

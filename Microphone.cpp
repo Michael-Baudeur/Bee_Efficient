@@ -31,7 +31,8 @@ void Microphone::compute_averages()
     #ifdef PRINT_ENABLE
     Serial.println(amp);
     #endif
-    _data[byte_number] = (amp/15000.0)*255;
+    //_data[byte_number] = (amp/800.0)*65535;
+    _data[byte_number] = amp;
     freq += 49;
   }
   #ifdef PRINT_ENABLE
@@ -40,6 +41,8 @@ void Microphone::compute_averages()
   {
     Serial.println(_data[k]);
   }
+  Serial.print("Major Peak Frequency : ");
+  Serial.println(_top_frequency);
   #endif
 }
 
@@ -57,11 +60,11 @@ void Microphone::calc_FFT()
   _FFT.Windowing(_vReal, _samples_N, FFT_WIN_TYP_BLACKMAN_HARRIS, FFT_FORWARD);	/* Weigh data */
   _FFT.Compute(_vReal, _vImag, _samples_N, FFT_FORWARD); /* Compute FFT */
   _FFT.ComplexToMagnitude(_vReal, _vImag, _samples_N); /* Compute magnitudes */
-
+  _top_frequency = _FFT.MajorPeak();
   this->compute_averages();
 }
 
-uint8_t* Microphone::get_data()
+uint16_t* Microphone::get_data()
 {
   this->calc_FFT();
   return _data;
@@ -72,10 +75,22 @@ uint8_t* Microphone::get_data(uint8_t* packet, int* index)
   this->calc_FFT();
   for(int i = 0; i < 10; i++)
   {
-    packet[*index] = _data[i];
+    uint8_t* data_ptr = (uint8_t*)&_data[i];
+    packet[*index] = data_ptr[0];
+    (*index)++;
+    packet[*index] = data_ptr[1];
     (*index)++;
   }
-  return _data;
+
+  uint32_t major_peak = _top_frequency*100;
+  uint8_t* major_peak_formatter = (uint8_t*)&major_peak;
+  for(int i = 0; i < 4; i++)
+  {
+    packet[*index] = major_peak_formatter[i];
+    (*index)++;
+  }
+
+  return (uint8_t*)_data;
 }
 
 int Microphone::freq_to_index(int freq)

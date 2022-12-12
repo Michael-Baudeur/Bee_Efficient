@@ -23,7 +23,7 @@ class Battery_Monitor
     float _battery_full_charge_voltage;
     float _battery_cutoff_voltage;
     float _voltage_bridge_ratio;
-    uint8_t _data[4];
+    uint8_t _data[2];
 };
 
 #endif //BATTERY_MONITOR_H

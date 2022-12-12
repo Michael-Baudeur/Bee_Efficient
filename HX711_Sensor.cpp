@@ -35,12 +35,12 @@ bool HX711_Sensor::calibrate(uint8_t mode)
   if(!_calibrating)
   {
     _module.set_scale();
-    _module.tare();
+    _module.set_offset(73126);
     _calibrating = true;
     #ifdef PRINT_ENABLE
-    Serial.println("Put a known weight on the scale.");
     if(mode == SERIAL_INPUT)
     {
+      Serial.println("Put a known weight on the scale.");
       Serial.println("And enter its value.");
       Serial.print(">");
       string data;
@@ -166,12 +166,12 @@ bool HX711_Sensor::update_average_mass(uint32_t nb_samples)
     Serial.println(_mass);
     #endif
 
-    uint32_t mass_format = _mass*100;
+    uint16_t mass_format = ((_mass*100)+(65534/2));
     uint8_t* mass_formatter = (uint8_t*)&mass_format;
     _data[0] = mass_formatter[0];
     _data[1] = mass_formatter[1];
-    _data[2] = mass_formatter[2];
-    _data[3] = mass_formatter[3];
+    //_data[2] = mass_formatter[2];
+    //_data[3] = mass_formatter[3];
 
     return true;
   }
@@ -193,7 +193,7 @@ uint8_t* HX711_Sensor::get_data()
 uint8_t* HX711_Sensor::get_data(uint8_t* packet, int* index)
 {
   this->update_average_mass(10);
-  for(int i = 0; i < 4; i++)
+  for(int i = 0; i < 2; i++)
   {
     packet[*index] = _data[i];
     (*index)++;

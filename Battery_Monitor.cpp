@@ -39,13 +39,17 @@ void Battery_Monitor::update()
 {
   _voltage = ((float)analogRead(_ADC_pin)/1023.0)*3.3*_voltage_bridge_ratio;
   _charge_percent = (_voltage - _battery_cutoff_voltage)/(_battery_full_charge_voltage - _battery_cutoff_voltage);
+  #ifdef PRINT_ENABLE
+  Serial.print("Voltage : ");
+  Serial.println(_voltage);
+  #endif
 
-  uint32_t voltage_format = _voltage*100;
+  uint16_t voltage_format = ((_voltage*100)+(65534/2));
   uint8_t* voltage_formatter = (uint8_t*)&voltage_format;
   _data[0] = voltage_formatter[0];
   _data[1] = voltage_formatter[1];
-  _data[2] = voltage_formatter[2];
-  _data[3] = voltage_formatter[3];
+  //_data[2] = voltage_formatter[2];
+  //_data[3] = voltage_formatter[3];
 }
 
 uint8_t* Battery_Monitor::get_data()
@@ -57,7 +61,7 @@ uint8_t* Battery_Monitor::get_data()
 uint8_t* Battery_Monitor::get_data(uint8_t* packet, int* index)
 {
   this->update();
-  for(int i = 0; i < 4; i++)
+  for(int i = 0; i < 2; i++)
   {
     packet[*index] = _data[i];
     (*index)++;

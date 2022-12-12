@@ -42,9 +42,11 @@ int LoRa_E5::at_send_check_response(char *p_ack, int timeout_ms, char *p_cmd, ..
 bool LoRa_E5::module_setup()
 {
   Serial1.begin(9600);
+  //this->low_power_OFF();
   #ifdef PRINT_ENABLE 
   Serial.print("E5 LORAWAN TEST\r\n"); 
   #endif
+  this->factory_reset();
   if(at_send_check_response("+AT: OK", 100, "AT\r\n")) 
   { 
     _is_exist = true; 
@@ -154,4 +156,54 @@ void LoRa_E5::module_send_8(uint8_t* data, uint32_t data_length)
   strcat(cmd, "\r\n"); 
   this->at_send_check_response("ACK Received", 5000, cmd); 
   delay(1000);
+}
+
+void LoRa_E5::low_power_ON()
+{
+  delay(10000);
+  this->at_send_check_response("", 1000, "AT+LOWPOWER=AUTOON\r\n");
+}
+
+void LoRa_E5::low_power_OFF()
+{
+  /*char buf[256];
+  buf[0] = 0xFF;
+  buf[1] = 0xFF;
+  buf[2] = 0xFF;
+  buf[3] = 0xFF;
+  sprintf(buf+4, "AT+MSG=\"string\"\r\n");
+  Serial1.print(buf);
+  //Serial1.print(0xFFFFFFFF61742B6C6F77706F7765723D6175746F6F66660D0A);
+  //Serial1.print("AT+LOWPOWER=AUTOOFF\r\n");
+  //this->at_send_check_response("", 1000, "AT+LOWPOWER=AUTOOFF\r\n");*/
+  //Serial1.print(0xFFFFFFFF61742B6C6F77706F7765723D6175746F6F66660D0A);
+  //this->at_send_check_response("", 1000, "AT+LOWPOWER=AUTOOFF\r\n");
+  //this->module_setup();
+  Serial1.print(0xFFFFFFFF);
+  Serial1.print(0xFFFFFFFF61742B6C6F77706F7765723D6175746F6F66660D0A);
+  Serial1.print("AT+LOWPOWER=AUTOOFF\r\n");
+  this->at_send_check_response("", 1000, "AT+LOWPOWER=AUTOOFF\r\n");
+  //delay(100);
+}
+
+void LoRa_E5::factory_reset()
+{
+  Serial1.print(0xFFFFFFFF);
+  Serial1.print(0xFFFFFFFF61742B6C6F77706F7765723D6175746F6F66660D0A);
+  Serial1.print("AT+LOWPOWER=AUTOOFF\r\n");
+  this->at_send_check_response("", 1000, "AT+LOWPOWER=AUTOOFF\r\n");
+  this->at_send_check_response("", 1000, "AT+FDEFAULT\r\n");
+}
+
+void LoRa_E5::positioning()
+{
+  String LoRa_Response;
+  this->at_send_check_response("", 1000, "AT+BEACON=DMMUL");
+  this->at_send_check_response("", 1000, "AT+BEACON=INFO");
+  //this->at_send_check_response("", 15000, "AT+CLASS=B");
+  this->at_send_check_response("", 1000, "AT+BEACON=GWGPS");
+  LoRa_Response = _recv_buf;
+  Serial.print("da pos : ");
+  Serial.println(LoRa_Response);
+  this->at_send_check_response("", 1000, "AT+CLASS=A");
 }

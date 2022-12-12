@@ -43,7 +43,7 @@ class HX711_Sensor
     float _scale_factor;
     bool _calibrating;
     float _known_weight;
-    uint8_t _data[4];
+    uint8_t _data[2];
 };
 
 #endif //HX711_SENSOR_H
