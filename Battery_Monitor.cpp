@@ -27,11 +27,11 @@ float Battery_Monitor::get_charge()
 float Battery_Monitor::get_voltage()
 {
   this->update();
-  #ifdef PRINT_ENABLE
+  /*#ifdef PRINT_ENABLE
   Serial.print("Voltage : ");
   Serial.print(_voltage);
   Serial.println("V");
-  #endif
+  #endif*/
   return _voltage;
 }
 
@@ -41,7 +41,8 @@ void Battery_Monitor::update()
   _charge_percent = (_voltage - _battery_cutoff_voltage)/(_battery_full_charge_voltage - _battery_cutoff_voltage);
   #ifdef PRINT_ENABLE
   Serial.print("Voltage : ");
-  Serial.println(_voltage);
+  Serial.print(_voltage);
+  Serial.println("V");
   #endif
 
   uint16_t voltage_format = ((_voltage*100)+(65534/2));

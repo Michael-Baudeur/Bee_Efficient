@@ -157,6 +157,7 @@ bool HX711_Sensor::update_tared_raw_data(uint32_t nb_samples)
 
 bool HX711_Sensor::update_average_mass(uint32_t nb_samples)
 {
+  bool worked;
   if(_module.is_ready())
   {
     _prev_mass = _mass;
@@ -166,22 +167,22 @@ bool HX711_Sensor::update_average_mass(uint32_t nb_samples)
     Serial.println(_mass);
     #endif
 
-    uint16_t mass_format = ((_mass*100)+(65534/2));
-    uint8_t* mass_formatter = (uint8_t*)&mass_format;
-    _data[0] = mass_formatter[0];
-    _data[1] = mass_formatter[1];
-    //_data[2] = mass_formatter[2];
-    //_data[3] = mass_formatter[3];
-
-    return true;
+    worked = true;
   }
   else
   {
     #ifdef PRINT_ENABLE
     Serial.println("HX711 not found.");
     #endif
-    return false;
+    worked = false;
   }
+  uint16_t mass_format = ((_mass*100)+(65534/2));
+  uint8_t* mass_formatter = (uint8_t*)&mass_format;
+  _data[0] = mass_formatter[0];
+  _data[1] = mass_formatter[1];
+  //_data[2] = mass_formatter[2];
+  //_data[3] = mass_formatter[3];
+  return worked;
 }
 
 uint8_t* HX711_Sensor::get_data()

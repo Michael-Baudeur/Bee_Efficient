@@ -91,11 +91,11 @@ double INA219_Sensor::light_percent()
   double bus_voltage = this->bus_voltage();
   if(bus_voltage < 4.5)
   {
-    _light = (bus_voltage/4.5)*25;
+    _light = (bus_voltage/4.5)*10;
   }
   else
   {
-    _light = current*(0.9/_full_sun_current)*75 + 25;
+    _light = current*(0.9/_full_sun_current)*90 + 10;
   }
 
   #ifdef PRINT_ENABLE

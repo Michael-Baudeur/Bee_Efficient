@@ -20,6 +20,7 @@ void Microphone::compute_averages()
   Serial.println("Microphone amps : ");
   #endif
   int freq = 96; //Hz
+  int max_amp_index = 0;
   for(int byte_number = 0; byte_number < 10; byte_number++)
   {
     int sum = 0;
@@ -31,10 +32,15 @@ void Microphone::compute_averages()
     #ifdef PRINT_ENABLE
     Serial.println(amp);
     #endif
+    if(amp > _data[max_amp_index])
+    {
+      max_amp_index = byte_number;
+    }
     //_data[byte_number] = (amp/800.0)*65535;
     _data[byte_number] = amp;
     freq += 49;
   }
+  _top_frequency = 98+25+49*max_amp_index;
   #ifdef PRINT_ENABLE
   Serial.println("Microphone bytes : ");
   for(int k = 0; k < 10; k++)
@@ -60,7 +66,7 @@ void Microphone::calc_FFT()
   _FFT.Windowing(_vReal, _samples_N, FFT_WIN_TYP_BLACKMAN_HARRIS, FFT_FORWARD);	/* Weigh data */
   _FFT.Compute(_vReal, _vImag, _samples_N, FFT_FORWARD); /* Compute FFT */
   _FFT.ComplexToMagnitude(_vReal, _vImag, _samples_N); /* Compute magnitudes */
-  _top_frequency = _FFT.MajorPeak();
+  //_top_frequency = _FFT.MajorPeak();
   this->compute_averages();
 }
 

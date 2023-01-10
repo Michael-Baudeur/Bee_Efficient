@@ -80,6 +80,14 @@ bool LoRa_E5::join(int mode)
     if (_is_join || mode == LORA_JOIN_FORCE) 
     { 
       ret = at_send_check_response("+JOIN: Network joined", 12000, "AT+JOIN\r\n"); 
+      if(mode == LORA_JOIN_FORCE)
+      {
+        if(strstr(_recv_buf, "Joined already") || strstr(_recv_buf, "Network joined"))
+          return true;
+        else
+          return false;
+      }
+
       if (ret) 
       { 
         _is_join = false; 
@@ -101,7 +109,7 @@ bool LoRa_E5::join(int mode)
           return false;
           delay(5000);
         } 
-      } 
+      }
     } 
   } 
   else 
@@ -110,11 +118,11 @@ bool LoRa_E5::join(int mode)
   } 
 }
 
-bool LoRa_E5::connect(uint32_t max_join_attempts)
+bool LoRa_E5::connect(uint32_t max_join_attempts, int mode)
 {
   for(int i = 0; i < max_join_attempts; i++)
   {
-    if(this->join())
+    if(this->join(mode))
     {
       #ifdef PRINT_ENABLE
       Serial.println("Successfully connected to LoRa Network!");
@@ -206,4 +214,53 @@ void LoRa_E5::positioning()
   Serial.print("da pos : ");
   Serial.println(LoRa_Response);
   this->at_send_check_response("", 1000, "AT+CLASS=A");
+}
+
+int LoRa_E5::module_receive(uint8_t* data)
+{
+  this->at_send_check_response("", 1000, "AT+MSG");
+  String data_rec;
+  data_rec = _recv_buf;
+  data = (uint8_t*)_recv_buf;
+  Serial.print("Data received : ");
+
+  Serial.println(data_rec);
+  string data_rec2 = _recv_buf;
+  vector<string> data_read;
+  bool test = false;
+  if(strstr(_recv_buf, "RX:") != NULL)
+  {
+    data_read = this->split(data_rec2, regex("[\"]+"));
+    test = true;
+  }
+  else
+  {
+    return 0;
+  }
+
+  Serial.print("data = ");
+  char result[100];
+  result[0] = '\0';
+  if(test)
+  {
+    int i;
+    for(i = 0; i < data_read[1].length(); i++)
+    {
+      result[i] = data_read[1][i];
+    }
+    result[i] = '\0';
+    int x = stoul(result, nullptr, 16);
+    _downlink_data = x;
+    Serial.println(x);
+  }
+  Serial.println(result);
+  delay(1000*5);
+  return _downlink_data;
+}
+
+vector<string> LoRa_E5::split(const string &s, const regex &sep_regex)
+{
+    sregex_token_iterator iter(s.begin(), s.end(), sep_regex, -1);
+    sregex_token_iterator end;
+    return {iter, end};
 }

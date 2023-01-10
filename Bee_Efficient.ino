@@ -51,7 +51,7 @@
 
 //Function prototypes
 float ds1_temperature();
-//float ds2_temperature();
+uint16_t ds1_temp_data[2];
 
 //*****************************************************************************
 
@@ -97,6 +97,8 @@ void setup() {
   dht_int.setup();
   uint8_t init_temp;
   ds1_temperature(&init_temp, 0);
+  ds1_temp_data[0] = (65534/2);
+  ds1_temp_data[1] = (65534/2);
   batt.setup();
   microphone.setup();
   Scale.module_setup();
@@ -104,7 +106,7 @@ void setup() {
   //E5.module_setup();
   //E5.factory_reset();
   E5.module_setup();
-  E5.connect(1);
+  E5.connect(5);
 
   
 
@@ -120,39 +122,42 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  digitalWrite(SWITCH_LOAD, HIGH);
-  go_high();
-  //delay(5000);
-  dht_ext.setup();
-  dht_int.setup();
-  int index = 0;
-  delay(1000);
-  SP_Current_Sensor.module_setup(1);
-  dht_ext.get_data(data_packet, &index);
-  dht_int.get_data(data_packet, &index);
-  //delay(1000);
-  ds1_temperature(data_packet, &index);
-  //ds2_temperature(data_packet, &index);
-  //delay(2000);
-  Scale.power_on();
-  delay(500);
-  Scale.get_data(data_packet, &index);
-  Scale.power_off();
+  if(batt.get_voltage() > 3.31)
+  {
+    digitalWrite(SWITCH_LOAD, HIGH);
+    go_high();
+    //delay(5000);
+    dht_ext.setup();
+    dht_int.setup();
+    int index = 0;
+    delay(1000);
+    SP_Current_Sensor.module_setup(1);
+    dht_ext.get_data(data_packet, &index);
+    dht_int.get_data(data_packet, &index);
+    //delay(1000);
+    ds1_temperature(data_packet, &index);
+    //delay(2000);
+    Scale.power_on();
+    delay(500);
+    Scale.module_setup();
+    Scale.get_data(data_packet, &index);
+    Scale.power_off();
 
-  SP_Current_Sensor.get_data(data_packet, &index);
-  batt.get_data(data_packet, &index);
-  microphone.get_data(data_packet, &index);
-  
-  go_low();
-  E5.low_power_OFF();
-  delay(1000);
-  digitalWrite(SWITCH_LOAD, LOW);
-  E5.join(LORA_JOIN_FORCE);
-  //E5.positioning();
-  E5.module_send_8(data_packet, 43);
-  E5.low_power_ON();
+    SP_Current_Sensor.get_data(data_packet, &index);
+    batt.get_data(data_packet, &index);
+    microphone.get_data(data_packet, &index);
+
+    go_low();
+    E5.low_power_OFF();
+    delay(1000);
+    digitalWrite(SWITCH_LOAD, LOW);
+    E5.connect(10, LORA_JOIN_FORCE);
+    //E5.positioning();
+    E5.module_send_8(data_packet, 43);
+    E5.low_power_ON();
+  } 
   delay(1000); //wait 10 minutes
-}
+} 
 //*****************************************************************************
 
 
@@ -186,9 +191,10 @@ void go_high()
 float ds1_temperature(uint8_t* packet, int* index)
 {
   float temperature = 0;
+  int array_index = 0;
   MaximWire::Bus bus_ds1(PIN_BUS_DS1);
   MaximWire::DS18B20 device;
-  
+
   MaximWire::Discovery discovery = bus_ds1.Discover();
   do
   {
@@ -229,14 +235,13 @@ float ds1_temperature(uint8_t* packet, int* index)
         Serial.println();
         #endif
         device.Update(bus_ds1);
-
-        uint16_t temp_format = ((temp*100)+(65534/2));
-        uint8_t* temp_formatter = (uint8_t*)&temp_format;
-        for(int i = 0; i < 2; i++)
+        if(!isnan(temp))
         {
-          packet[*index] = temp_formatter[i];
-          (*index)++;
+          uint16_t temp_format = (temp*100)+(65534/2);
+          ds1_temp_data[array_index] = temp_format;
         }
+        array_index++;
+        
       }
       #ifdef PRINT_ENABLE
       else 
@@ -253,6 +258,13 @@ float ds1_temperature(uint8_t* packet, int* index)
     #endif
     
   }while(discovery.HaveMore());
+
+  uint8_t* temp_formatter = (uint8_t*)ds1_temp_data;
+  for(int i = 0; i < 4; i++)
+  {
+    packet[*index] = temp_formatter[i];
+    (*index)++;
+  }
   return temperature/2;
 }
 //*****************************************************************************

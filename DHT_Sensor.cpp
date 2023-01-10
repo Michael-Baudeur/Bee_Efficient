@@ -16,6 +16,18 @@ DHT_Sensor::DHT_Sensor(int pin) : _pin(pin), _temperature(0), _humidity(0)
 
 void DHT_Sensor::setup()
 {
+  _temperature = 0;
+  _humidity = 0;
+  uint16_t temperature_format = ((_temperature*100)+(65534/2));
+  uint16_t humidity_format = ((_humidity*100)+(65534/2));
+  uint8_t* temperature_formatter = (uint8_t*)&temperature_format;
+  uint8_t* humidity_formatter = (uint8_t*)&humidity_format;
+  _data[0] = temperature_formatter[0];
+  _data[1] = temperature_formatter[1];
+  //_data[2] = temperature_formatter[2];
+  //_data[3] = temperature_formatter[3];
+  _data[2] = humidity_formatter[0];
+  _data[3] = humidity_formatter[1];
   _dht->begin();
 }
 
@@ -37,7 +49,6 @@ bool DHT_Sensor::update_data()
   Serial.print("Humidité : ");
   Serial.println(_humidity);
   #endif
-  
   /*_data[0] = _temperature;
   _data[1] = _humidity;*/
 
@@ -53,6 +64,7 @@ bool DHT_Sensor::update_data()
   _data[3] = humidity_formatter[1];
   //_data[6] = humidity_formatter[2];
   //_data[7] = humidity_formatter[3];
+
   return true;
 }
 
